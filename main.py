@@ -2,9 +2,10 @@
 """Turok: CLI torrent search via public trackers."""
 
 import argparse
+import platform
 import re
+import subprocess
 import sys
-import webbrowser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
@@ -15,6 +16,27 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 TIMEOUT = 15
+
+# Public trackers to help find peers for metadata
+TRACKERS = [
+    "udp://tracker.opentrackr.org:1337/announce",
+    "udp://open.stealth.si:80/announce",
+    "udp://tracker.torrent.eu.org:451/announce",
+    "udp://tracker.bittor.pw:1337/announce",
+    "udp://public.popcorn-tracker.org:6969/announce",
+    "udp://tracker.dler.org:6969/announce",
+    "udp://exodus.desync.com:6969/announce",
+    "udp://open.demonii.com:1337/announce",
+]
+
+
+def add_trackers(magnet: str) -> str:
+    """Add public trackers to a magnet link if missing."""
+    if not magnet or "&tr=" in magnet:
+        return magnet
+    from urllib.parse import quote
+    tracker_params = "".join(f"&tr={quote(t, safe='')}" for t in TRACKERS)
+    return magnet + tracker_params
 
 
 def format_size(size_bytes: int) -> str:
@@ -210,21 +232,40 @@ def print_results(results: list[dict]):
 
 def get_magnet(result: dict) -> str | None:
     """Get magnet link, fetching from detail page if needed."""
-    if result["magnet_link"]:
-        return result["magnet_link"]
-    if result["detail_url"] and result["source"] == "1337x":
+    magnet = result["magnet_link"]
+    if not magnet and result["detail_url"] and result["source"] == "1337x":
         magnet = get_1337x_magnet(result["detail_url"])
         result["magnet_link"] = magnet
-        return magnet
+    if magnet:
+        return add_trackers(magnet)
     return None
+
+
+def open_magnet(magnet: str) -> bool:
+    """Open magnet link using system protocol handler (bypasses browser)."""
+    try:
+        system = platform.system()
+        if system == "Darwin":
+            subprocess.run(["open", magnet], check=True, capture_output=True)
+        elif system == "Linux":
+            subprocess.run(["xdg-open", magnet], check=True, capture_output=True)
+        elif system == "Windows":
+            subprocess.run(["start", "", magnet], shell=True, check=True, capture_output=True)
+        else:
+            return False
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 def download(result: dict):
     """Open magnet link in default torrent client."""
     magnet = get_magnet(result)
     if magnet:
-        webbrowser.open(magnet)
-        print(f"Sent to torrent client: {result['title']}")
+        if open_magnet(magnet):
+            print(f"Sent to torrent client: {result['title']}")
+        else:
+            print(f"Failed to open magnet link for: {result['title']}")
     else:
         print(f"Could not get magnet link for: {result['title']}")
 
