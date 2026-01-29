@@ -6,37 +6,60 @@ CLI torrent search. Searches 1337x, The Pirate Bay, and RARBG in parallel.
 
 ## Install
 
-**pipx** (recommended - installs globally in isolated env):
 ```bash
 pipx install git+https://github.com/rlt-lab/turok.git
 ```
 
-**pip**:
-```bash
-pip install git+https://github.com/rlt-lab/turok.git
-```
-
-**From source**:
-```bash
-git clone https://github.com/rlt-lab/turok.git
-cd turok
-pip install .
-```
+Or with pip: `pip install git+https://github.com/rlt-lab/turok.git`
 
 ## Use
 
+Turok has two interfaces: a full-screen TUI and a simple CLI.
+
+### TUI
+
+```bash
+turok-tui
+```
+
+Type to search, browse results with arrow keys or `j`/`k`.
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send to torrent client |
+| `y` | Copy magnet to clipboard |
+| `o` | Open detail page in browser |
+| `g` / `G` | Jump to first / last |
+| `q` | Quit |
+| `?` | Help |
+
+### CLI
+
 ```bash
 turok ubuntu          # search
-turok "linux mint"    # multi-word search
-turok ubuntu -n 20    # show 20 results (default: 10)
+turok "linux mint"    # multi-word
+turok ubuntu -n 20    # 20 results (default: 10)
 turok debian -s size  # sort by size (default: seeders)
 ```
 
-Results show title, size, seeders/leechers, and source:
+Results print to stdout. Type a number to send that torrent to your client, or `q` to quit.
 
-```
-[1] Ubuntu 24.04 Desktop ISO (4.2 GB) - 1523↑ 42↓ [TPB]
-[2] Ubuntu 24.04 Server ISO (2.1 GB) - 892↑ 15↓ [1337x]
+### Add custom sites
+
+```bash
+turok add https://example-torrent-site.com
+turok sites           # list configured sites
 ```
 
-Type a number to send that torrent to your default client. Type `q` to quit.
+Turok will auto-detect the site's search structure and save it for future searches.
+
+## Dev
+
+Requires [uv](https://docs.astral.sh/uv/).
+
+```bash
+git clone https://github.com/rlt-lab/turok.git
+cd turok
+uv run turok-tui      # run TUI
+uv run turok ubuntu   # run CLI
+```
