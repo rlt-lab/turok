@@ -7,7 +7,16 @@ requires-python = ">=3.14"
 dependencies = [
     "requests>=2.28",
     "beautifulsoup4>=4.12",
+    "textual>=0.50.0",
+    "pyperclip>=1.8.0",
 ]
 
 [project.scripts]
 turok = "main:main"
+turok-tui = "tui:main"
+
+[tool.setuptools.packages.find]
+include = ["core*", "ui*"]
+
+[tool.setuptools]
+py-modules = ["main", "tui"]

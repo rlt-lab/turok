@@ -1,0 +1,297 @@
+/* Turok TUI Styles */
+
+/* Color scheme */
+$primary: #7c3aed;
+$primary-light: #a78bfa;
+$background: #0f172a;
+$surface: #1e293b;
+$surface-light: #334155;
+$text: #f8fafc;
+$text-muted: #94a3b8;
+$success: #22c55e;
+$warning: #eab308;
+$error: #ef4444;
+$info: #3b82f6;
+
+/* Health colors */
+$health-excellent: #22c55e;
+$health-good: #84cc16;
+$health-fair: #f97316;
+$health-poor: #ef4444;
+$health-dead: #64748b;
+
+/* Main app */
+Screen {
+    background: $background;
+}
+
+/* Header */
+#header {
+    dock: top;
+    height: 5;
+    background: $surface;
+    border: round $primary;
+    padding: 0 1;
+}
+
+#title {
+    color: $primary-light;
+    text-style: bold;
+    width: 100%;
+}
+
+#search-row {
+    width: 100%;
+    height: 1;
+    margin-top: 1;
+}
+
+#search-icon {
+    width: 3;
+    color: $text-muted;
+}
+
+#search-input {
+    width: 1fr;
+    background: transparent;
+    border: none;
+    color: $text;
+}
+
+#search-input:focus {
+    border: none;
+}
+
+#sort-indicator {
+    width: auto;
+    color: $text-muted;
+    text-align: right;
+}
+
+#timer {
+    width: 10;
+    color: $text-muted;
+    text-align: right;
+}
+
+/* Results panel */
+#results-panel {
+    height: 1fr;
+    background: $surface;
+    border: round $surface-light;
+    margin: 1 0;
+}
+
+#results-title {
+    dock: top;
+    height: 1;
+    background: $surface;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+#results-list {
+    height: 1fr;
+    scrollbar-gutter: stable;
+}
+
+/* Loading status */
+.source-status {
+    height: 1;
+    padding: 0 2;
+}
+
+.source-status.done {
+    color: $success;
+}
+
+.source-status.loading {
+    color: $info;
+}
+
+.source-status.error {
+    color: $error;
+}
+
+/* Result item */
+.result-item {
+    height: 4;
+    padding: 0 2;
+    background: $surface;
+}
+
+.result-item:hover {
+    background: $surface-light;
+}
+
+.result-item.-selected {
+    background: $primary;
+}
+
+.result-item.-selected .result-title {
+    color: $text;
+}
+
+.result-item.-selected .result-meta {
+    color: $text;
+}
+
+.result-item.-selected .health-bar {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.result-title {
+    color: $text;
+    text-style: bold;
+    width: 100%;
+}
+
+.result-meta {
+    color: $text-muted;
+    width: 100%;
+}
+
+.health-bar {
+    width: 100%;
+    height: 1;
+    background: $surface-light;
+}
+
+.health-bar-fill {
+    height: 1;
+}
+
+.health-bar-fill.excellent {
+    background: $health-excellent;
+}
+
+.health-bar-fill.good {
+    background: $health-good;
+}
+
+.health-bar-fill.fair {
+    background: $health-fair;
+}
+
+.health-bar-fill.poor {
+    background: $health-poor;
+}
+
+.health-bar-fill.dead {
+    background: $health-dead;
+}
+
+/* Details panel */
+#details-panel {
+    dock: bottom;
+    height: 10;
+    background: $surface;
+    border: round $surface-light;
+    padding: 1 2;
+}
+
+#details-title {
+    color: $text;
+    text-style: bold;
+    width: 100%;
+    height: 1;
+}
+
+#details-grid {
+    height: auto;
+    margin-top: 1;
+}
+
+.detail-label {
+    color: $text-muted;
+    width: 12;
+}
+
+.detail-value {
+    color: $text;
+    width: 1fr;
+}
+
+#magnet-preview {
+    color: $text-muted;
+    width: 100%;
+    height: 1;
+    margin-top: 1;
+}
+
+/* Footer */
+#footer {
+    dock: bottom;
+    height: 1;
+    background: $surface;
+    padding: 0 1;
+}
+
+.keyhint {
+    color: $text-muted;
+}
+
+.keyhint-key {
+    color: $primary-light;
+    text-style: bold;
+}
+
+/* Help screen */
+#help-overlay {
+    align: center middle;
+}
+
+#help-container {
+    width: 60;
+    height: auto;
+    max-height: 80%;
+    background: $surface;
+    border: round $primary;
+    padding: 1 2;
+}
+
+#help-title {
+    text-align: center;
+    color: $primary-light;
+    text-style: bold;
+    width: 100%;
+}
+
+.help-section {
+    margin-top: 1;
+    color: $text;
+}
+
+.help-section-title {
+    color: $text;
+    text-style: bold;
+}
+
+.help-row {
+    height: 1;
+}
+
+.help-key {
+    color: $primary-light;
+    width: 15;
+}
+
+.help-desc {
+    color: $text-muted;
+    width: 1fr;
+}
+
+/* Toast notifications */
+Toast {
+    background: $surface;
+    border: round $primary;
+    padding: 1 2;
+}
+
+Toast.-success {
+    border: round $success;
+}
+
+Toast.-error {
+    border: round $error;
+}
