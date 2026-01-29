@@ -2,6 +2,8 @@
 
 CLI torrent search. Searches 1337x, The Pirate Bay, and RARBG in parallel.
 
+![Turok TUI](assets/screenshot.png)
+
 ## Install
 
 **pipx** (recommended - installs globally in isolated env):
