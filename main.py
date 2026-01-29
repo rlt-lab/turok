@@ -7,9 +7,13 @@ import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
+
+from core.analyzer import SiteAnalyzer
+from core.config import ConfigManager
 
 # User agent to avoid blocks
 HEADERS = {
@@ -270,13 +274,8 @@ def download(result: dict):
         print(f"Could not get magnet link for: {result['title']}")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Search torrents via public trackers")
-    parser.add_argument("query", nargs="+", help="Search query")
-    parser.add_argument("-n", "--number", type=int, default=10, help="Number of results (default: 10)")
-    parser.add_argument("-s", "--sort", choices=["seeders", "size"], default="seeders", help="Sort by (default: seeders)")
-
-    args = parser.parse_args()
+def cmd_search(args):
+    """Handle the search command."""
     query = " ".join(args.query)
 
     print(f"Searching for '{query}'...")
@@ -309,6 +308,194 @@ def main():
                 print(f"Enter a number 1-{len(results)} or 'q' to quit")
         except ValueError:
             print(f"Enter a number 1-{len(results)} or 'q' to quit")
+
+
+def cmd_add(args):
+    """Handle the add command - auto-detect and add a site."""
+    url = args.url
+    test_query = args.query or "test"
+    verbose = args.verbose
+
+    # Parse URL
+    parsed = urlparse(url)
+    if not parsed.scheme:
+        url = f"https://{url}"
+        parsed = urlparse(url)
+
+    print(f"Analyzing {url}...")
+
+    analyzer = SiteAnalyzer(verbose=verbose)
+
+    # Try auto-detection first
+    result = analyzer.analyze(url, test_query)
+
+    # Fall back to known patterns if auto-detection fails
+    if not result.success:
+        if verbose:
+            print("Auto-detection failed, trying known patterns...")
+        result = analyzer.analyze_with_known_patterns(url, test_query)
+
+    if not result.success:
+        print(f"Failed to analyze site: {result.error}")
+        if verbose and result.attempts:
+            print("\nAttempts:")
+            for attempt in result.attempts:
+                print(f"  {attempt}")
+        sys.exit(1)
+
+    config = result.config
+    validation = result.validation
+
+    # Generate site key
+    site_key = parsed.netloc.replace(".", "_").replace("-", "_")
+
+    print(f"\nDetected configuration for '{config.name}':")
+    print(f"  Base URL: {config.base_url}")
+    print(f"  Search: {config.search.url_template}")
+    print(f"  Result selector: {config.selectors.result_item}")
+    print(f"  Title selector: {config.selectors.title}")
+
+    if validation:
+        print(f"\nValidation:")
+        print(f"  Results found: {validation.results_found}")
+        print(f"  Has detail links: {validation.has_detail_links}")
+        print(f"  Has magnets in results: {validation.has_magnets}")
+        if validation.sample_titles:
+            print(f"  Sample titles:")
+            for title in validation.sample_titles[:3]:
+                print(f"    - {title[:60]}{'...' if len(title) > 60 else ''}")
+
+    # Save config
+    manager = ConfigManager()
+    manager.save(site_key, config)
+
+    print(f"\nSaved to {manager.config_path}")
+    print(f"Site '{config.name}' added successfully!")
+
+
+def cmd_sites(args):
+    """Handle the sites command - list configured sites."""
+    manager = ConfigManager()
+
+    if args.all:
+        sites = manager.load_all()
+    else:
+        sites = manager.load_enabled()
+
+    if not sites:
+        print("No configured sites.")
+        print("Use 'turok add <url>' to add a site.")
+        return
+
+    print("Configured sites:\n")
+    for key, config in sites.items():
+        status = "enabled" if config.enabled else "disabled"
+        print(f"  {key}: {config.name} ({config.base_url}) [{status}]")
+
+
+def cmd_remove(args):
+    """Handle the remove command - remove a site."""
+    name = args.name
+    manager = ConfigManager()
+
+    if manager.remove(name):
+        print(f"Removed site '{name}'")
+    else:
+        print(f"Site '{name}' not found")
+        sys.exit(1)
+
+
+def cmd_enable(args):
+    """Handle the enable command - enable a site."""
+    name = args.name
+    manager = ConfigManager()
+
+    if manager.set_enabled(name, True):
+        print(f"Enabled site '{name}'")
+    else:
+        print(f"Site '{name}' not found")
+        sys.exit(1)
+
+
+def cmd_disable(args):
+    """Handle the disable command - disable a site."""
+    name = args.name
+    manager = ConfigManager()
+
+    if manager.set_enabled(name, False):
+        print(f"Disabled site '{name}'")
+    else:
+        print(f"Site '{name}' not found")
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Turok: CLI torrent search via public trackers",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
+
+    # Search command (default behavior for backwards compatibility)
+    search_parser = subparsers.add_parser("search", help="Search for torrents")
+    search_parser.add_argument("query", nargs="+", help="Search query")
+    search_parser.add_argument(
+        "-n", "--number", type=int, default=10, help="Number of results (default: 10)"
+    )
+    search_parser.add_argument(
+        "-s", "--sort", choices=["seeders", "size"], default="seeders",
+        help="Sort by (default: seeders)"
+    )
+    search_parser.set_defaults(func=cmd_search)
+
+    # Add command
+    add_parser = subparsers.add_parser("add", help="Auto-detect and add a torrent site")
+    add_parser.add_argument("url", help="URL of the site to add")
+    add_parser.add_argument(
+        "-q", "--query", help="Test query for validation (default: 'test')"
+    )
+    add_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Show detailed analysis"
+    )
+    add_parser.set_defaults(func=cmd_add)
+
+    # Sites command
+    sites_parser = subparsers.add_parser("sites", help="List configured sites")
+    sites_parser.add_argument(
+        "-a", "--all", action="store_true", help="Include disabled sites"
+    )
+    sites_parser.set_defaults(func=cmd_sites)
+
+    # Remove command
+    remove_parser = subparsers.add_parser("remove", help="Remove a configured site")
+    remove_parser.add_argument("name", help="Site key to remove")
+    remove_parser.set_defaults(func=cmd_remove)
+
+    # Enable command
+    enable_parser = subparsers.add_parser("enable", help="Enable a configured site")
+    enable_parser.add_argument("name", help="Site key to enable")
+    enable_parser.set_defaults(func=cmd_enable)
+
+    # Disable command
+    disable_parser = subparsers.add_parser("disable", help="Disable a configured site")
+    disable_parser.add_argument("name", help="Site key to disable")
+    disable_parser.set_defaults(func=cmd_disable)
+
+    # Handle backwards compatibility - if first arg isn't a known command, assume search
+    known_commands = {"search", "add", "sites", "remove", "enable", "disable", "-h", "--help"}
+    if len(sys.argv) > 1 and sys.argv[1] not in known_commands:
+        sys.argv.insert(1, "search")
+
+    args = parser.parse_args()
+
+    if args.command is None:
+        parser.print_help()
+        sys.exit(0)
+
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

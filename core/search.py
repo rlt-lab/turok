@@ -6,8 +6,16 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
+from .config import ConfigManager
 from .models import TorrentResult
-from .sources import PirateBaySource, RarbgSource, Source, X1337Source
+from .sources import (
+    AudiostorrentSource,
+    DynamicSource,
+    PirateBaySource,
+    RarbgSource,
+    Source,
+    X1337Source,
+)
 from .sources.base import add_trackers
 
 
@@ -34,13 +42,31 @@ class SearchUpdate:
 class SearchOrchestrator:
     """Orchestrates searches across multiple sources."""
 
-    def __init__(self):
+    def __init__(self, include_dynamic: bool = True):
         self.sources: list[Source] = [
             X1337Source(),
             PirateBaySource(),
             RarbgSource(),
+            AudiostorrentSource(),
         ]
+
+        # Load dynamic sources from config
+        if include_dynamic:
+            self._load_dynamic_sources()
+
         self._source_map = {s.name: s for s in self.sources}
+
+    def _load_dynamic_sources(self) -> None:
+        """Load dynamic sources from configuration."""
+        try:
+            manager = ConfigManager()
+            sites = manager.load_enabled()
+            for config in sites.values():
+                # Avoid duplicates with built-in sources
+                if not any(s.name.lower() == config.name.lower() for s in self.sources):
+                    self.sources.append(DynamicSource(config))
+        except Exception:
+            pass  # Silently fail if config is invalid
 
     def search_sync(
         self, query: str, limit: int = 50, sort_by: str = "seeders"
@@ -48,7 +74,7 @@ class SearchOrchestrator:
         """Synchronous search across all sources."""
         all_results = []
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {executor.submit(s.search, query): s for s in self.sources}
 
             for future in futures:
